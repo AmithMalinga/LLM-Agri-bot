@@ -1,0 +1,954 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AgriBot - Your Smart Farming Assistant</title>
+    <link rel="icon" type="image/x-icon" href="static/images/favicon.ico">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="This is an Agriculture chatbot that helps farmers to make write desitions." />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.3.0/font/bootstrap-icons.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-green: #2d6a4f;
+            --secondary-green: #40916c;
+            --light-green: #52b788;
+            --accent-green: #74c69d;
+            --bg-light: #f8f9fa;
+            --bg-white: #ffffff;
+            --text-dark: #1b4332;
+            --text-gray: #6c757d;
+            --shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 4px 20px rgba(45, 106, 79, 0.15);
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9f5f0 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: var(--text-dark);
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: var(--bg-white);
+            border-radius: 20px;
+            box-shadow: var(--shadow-lg);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            height: calc(100vh - 40px);
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--primary-green) 0%, var(--secondary-green) 100%);
+            padding: 30px;
+            text-align: center;
+            color: white;
+            flex-shrink: 0;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+        }
+
+        .header-icon {
+            font-size: 32px;
+        }
+
+        .disclaimer {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 12px 20px;
+            border-radius: 10px;
+            margin-top: 15px;
+            font-size: 14px;
+            backdrop-filter: blur(10px);
+        }
+
+        #chat-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+            background: var(--bg-light);
+            scroll-behavior: smooth;
+            min-height: 0;
+        }
+
+        #chat-container::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        #chat-container::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        #chat-container::-webkit-scrollbar-thumb {
+            background: var(--accent-green);
+            border-radius: 10px;
+        }
+
+        .message-wrapper {
+            margin-bottom: 16px;
+            display: flex;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .user-message {
+            justify-content: flex-end;
+        }
+
+        .bot-message {
+            justify-content: flex-start;
+        }
+
+        .message-content {
+            max-width: 75%;
+            padding: 14px 18px;
+            border-radius: 16px;
+            font-size: 15px;
+            line-height: 1.5;
+            box-shadow: var(--shadow);
+        }
+
+        .user-message .message-content {
+            background: var(--primary-green);
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .bot-message .message-content {
+            background: white;
+            color: var(--text-dark);
+            border-bottom-left-radius: 4px;
+            border-left: 3px solid var(--accent-green);
+            line-height: 1.8;
+        }
+
+        /* Formatted text styling */
+        .bot-message .message-content h3 {
+            color: var(--primary-green);
+            font-weight: 700;
+            font-size: 17px;
+            margin: 20px 0 12px 0;
+            padding-bottom: 6px;
+            border-bottom: 2px solid var(--accent-green);
+        }
+
+        .bot-message .message-content h3:first-child {
+            margin-top: 0;
+        }
+
+        .bot-message .message-content .list-item {
+            margin: 12px 0;
+            padding-left: 0;
+        }
+
+        .bot-message .message-content .list-item strong {
+            color: var(--secondary-green);
+            font-weight: 600;
+            font-size: 15px;
+        }
+
+        .bot-message .message-content .list-item-content {
+            display: block;
+            margin-top: 4px;
+            color: var(--text-dark);
+            padding-left: 24px;
+        }
+
+        .bot-message .message-content .tip-section {
+            margin-top: 20px;
+            padding: 12px;
+            background: var(--bg-light);
+            border-radius: 8px;
+            border-left: 3px solid var(--light-green);
+        }
+
+        .bot-message .message-content .tip-title {
+            color: var(--secondary-green);
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .bot-message .message-content ul {
+            margin: 8px 0;
+            padding-left: 20px;
+        }
+
+        .bot-message .message-content ul li {
+            margin: 6px 0;
+            color: var(--text-dark);
+        }
+
+        .message-with-audio {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            max-width: 90%;
+        }
+
+        .bot-avatar {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--secondary-green), var(--light-green));
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 22px;
+            box-shadow: var(--shadow);
+        }
+
+        .message-content-wrapper {
+            flex: 1;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .audio-play-btn {
+            background: var(--secondary-green);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            flex-shrink: 0;
+            margin-top: 4px;
+        }
+
+        .audio-play-btn:hover {
+            background: var(--primary-green);
+            transform: scale(1.1);
+        }
+
+        .audio-play-btn i {
+            font-size: 16px;
+        }
+
+        .audio-play-btn.playing {
+            background: var(--primary-green);
+            animation: pulse 1.5s infinite;
+        }
+
+        .loading-message {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 14px 18px;
+            background: white;
+            border-radius: 16px;
+            color: var(--text-gray);
+            font-style: italic;
+            box-shadow: var(--shadow);
+        }
+
+        .loading-dots {
+            display: flex;
+            gap: 4px;
+        }
+
+        .loading-dots span {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--secondary-green);
+            animation: bounce 1.4s infinite ease-in-out;
+        }
+
+        .loading-dots span:nth-child(1) {
+            animation-delay: -0.32s;
+        }
+
+        .loading-dots span:nth-child(2) {
+            animation-delay: -0.16s;
+        }
+
+        @keyframes bounce {
+            0%, 80%, 100% {
+                transform: scale(0);
+            }
+            40% {
+                transform: scale(1);
+            }
+        }
+
+        .input-section {
+            padding: 24px;
+            background: white;
+            border-top: 1px solid #e9ecef;
+            flex-shrink: 0;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        #user-input {
+            flex: 1;
+            padding: 14px 18px;
+            border: 2px solid #e9ecef;
+            border-radius: 12px;
+            font-size: 15px;
+            font-family: inherit;
+            transition: all 0.3s ease;
+        }
+
+        #user-input:focus {
+            outline: none;
+            border-color: var(--secondary-green);
+            box-shadow: 0 0 0 3px rgba(64, 145, 108, 0.1);
+        }
+
+        .btn {
+            padding: 14px 28px;
+            border: none;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-family: inherit;
+        }
+
+        .btn-primary {
+            background: var(--primary-green);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--secondary-green);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+
+        .btn-secondary {
+            background: var(--accent-green);
+            color: var(--text-dark);
+        }
+
+        .btn-secondary:hover {
+            background: var(--light-green);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .btn-recording {
+            background: #dc3545;
+            color: white;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.8;
+            }
+        }
+
+        .controls-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        #audio {
+            width: 100%;
+            margin-top: 12px;
+            border-radius: 12px;
+            outline: none;
+        }
+
+        audio::-webkit-media-controls-panel {
+            background: var(--bg-light);
+        }
+
+        .footer {
+            text-align: center;
+            padding: 20px;
+            background: var(--bg-light);
+            font-size: 14px;
+            color: var(--text-gray);
+        }
+
+        .footer a {
+            color: var(--primary-green);
+            text-decoration: none;
+            margin: 0 8px;
+            transition: color 0.3s ease;
+        }
+
+        .footer a:hover {
+            color: var(--secondary-green);
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+
+            .container {
+                border-radius: 0;
+                height: calc(100vh - 20px);
+            }
+
+            .header h1 {
+                font-size: 22px;
+            }
+
+            .message-content {
+                max-width: 85%;
+            }
+
+            .controls-row {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Language Selection Modal */
+        .language-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        .language-modal-content {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 500px;
+            width: 90%;
+            text-align: center;
+            box-shadow: var(--shadow-lg);
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(30px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .language-modal-title {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--primary-green);
+            margin-bottom: 10px;
+        }
+
+        .language-modal-subtitle {
+            font-size: 16px;
+            color: var(--text-gray);
+            margin-bottom: 30px;
+        }
+
+        .language-options {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .language-btn {
+            padding: 20px;
+            border: 2px solid #e9ecef;
+            border-radius: 16px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: inherit;
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .language-btn:hover {
+            border-color: var(--secondary-green);
+            background: var(--bg-light);
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .language-btn i {
+            font-size: 32px;
+            display: block;
+            margin-bottom: 10px;
+        }
+
+        .lang-en i {
+            color: #0052B4;
+        }
+
+        .lang-si i {
+            color: #8B4513;
+        }
+
+        .language-indicator {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 13px;
+            backdrop-filter: blur(10px);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        @media (max-width: 768px) {
+            .language-options {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Language Selection Modal -->
+    <div class="language-modal" id="languageModal">
+        <div class="language-modal-content">
+            <div class="language-modal-title">Welcome! ආයුබෝවන්!</div>
+            <div class="language-modal-subtitle">Please select your preferred language<br>කරුණාකර ඔබගේ භාෂාව තෝරන්න</div>
+            <div class="language-options">
+                <button class="language-btn lang-en" onclick="selectLanguage('en')">
+                    <i class="bi bi-translate"></i>
+                    <div>English</div>
+                </button>
+                <button class="language-btn lang-si" onclick="selectLanguage('si')">
+                    <i class="bi bi-translate"></i>
+                    <div>සිංහල</div>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="header">
+            <div class="language-indicator" id="lang-indicator">
+                <i class="bi bi-globe"></i>
+                <span id="current-lang">English</span>
+            </div>
+            <h1>
+                <i class="bi bi-tree header-icon"></i>
+                <span id="app-title">AgriBot</span>
+            </h1>
+            <div class="disclaimer" id="app-subtitle">
+                <i class="bi bi-info-circle"></i> <span>Your smart farming assistant - Powered by AI</span>
+            </div>
+        </div>
+
+        <div id="chat-container"></div>
+
+        <div class="input-section">
+            <div class="input-group">
+                <input type="text" id="user-input" placeholder="Ask me anything about agriculture...">
+                <button class="btn btn-primary" id="send-btn">
+                    <i class="bi bi-send-fill"></i>
+                    <span id="send-text">Send</span>
+                </button>
+            </div>
+
+            <audio id="audio" controls style="display: none;"></audio>
+        </div>
+
+        <!-- <div class="footer">
+            Made with <i class="bi bi-heart-fill" style="color: #dc3545;"></i> by Mohammed Ashraf
+            <a href="https://www.linkedin.com/in/mohammed97ashraf" target="_blank"><i class="bi bi-linkedin"></i></a>
+            <a href="https://github.com/mohammed97ashraf" target="_blank"><i class="bi bi-github"></i></a>
+        </div> -->
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+    <script>
+        // Language translations
+        const translations = {
+            en: {
+                appTitle: 'AgriBot',
+                appSubtitle: 'Your smart farming assistant - Powered by AI',
+                inputPlaceholder: 'Ask me anything about agriculture...',
+                sendBtn: 'Send',
+                welcomeMsg: '👋 Hello! I\'m AgriBot, your smart farming assistant. How can I help you today?',
+                errorMsg: 'Sorry, something went wrong. Please try again.',
+                processingAudio: 'Processing audio...',
+                thinking: 'AgriBot is thinking...',
+                langName: 'English',
+                systemPrompt: 'You are a helpful agriculture chatbot assisting farmers with their queries. When providing agricultural advice, solutions, or instructions, always format your response in clear point-wise or numbered format for better readability. Use bullet points or numbers to break down steps, tips, or information. For simple greetings or general conversation, respond naturally without points. Always respond in English.'
+            },
+            si: {
+                appTitle: 'කෘෂි බොට්',
+                appSubtitle: 'ඔබගේ බුද්ධිමත් ගොවිතැන් සහායක - AI මගින් බලගන්වා ඇත',
+                inputPlaceholder: 'කෘෂිකර්මය ගැන ඕනෑම දෙයක් අහන්න...',
+                sendBtn: 'යවන්න',
+                welcomeMsg: '👋 ආයුබෝවන්! මම කෘෂි බොට්, ඔබගේ බුද්ධිමත් ගොවිතැන් සහායකයා. අද මම ඔබට කෙසේ උදව් කළ හැකිද?',
+                errorMsg: 'සමාවන්න, යමක් වැරදී ඇත. කරුණාකර නැවත උත්සාහ කරන්න.',
+                processingAudio: 'හඬ සැකසෙමින්...',
+                thinking: 'කෘෂි බොට් සිතමින්...',
+                langName: 'සිංහල',
+                systemPrompt: 'You are a helpful agriculture chatbot assisting farmers with their queries. When providing agricultural advice, solutions, or instructions, always format your response in clear point-wise or numbered format for better readability. Use bullet points or numbers to break down steps, tips, or information. For simple greetings or general conversation, respond naturally without points. Always respond in Sinhala language.'
+            }
+        };
+
+        let currentLanguage = 'en';
+        let systemPrompt = translations.en.systemPrompt;
+
+        function selectLanguage(lang) {
+            currentLanguage = lang;
+            systemPrompt = translations[lang].systemPrompt;
+            updateUILanguage();
+            $('#languageModal').fadeOut(300);
+            
+            // Show welcome message
+            setTimeout(function() {
+                $('#chat-container').append('<div class="message-wrapper bot-message"><div class="message-with-audio"><div class="bot-avatar">🤖</div><div class="message-content">' + translations[lang].welcomeMsg + '</div></div></div>');
+                scrollToBottom();
+            }, 400);
+        }
+
+        function updateUILanguage() {
+            const t = translations[currentLanguage];
+            $('#app-title').text(t.appTitle);
+            $('#app-subtitle span').text(t.appSubtitle);
+            $('#user-input').attr('placeholder', t.inputPlaceholder);
+            $('#send-text').text(t.sendBtn);
+            $('#current-lang').text(t.langName);
+        }
+
+        window.selectLanguage = selectLanguage;
+
+        $(document).ready(function() {
+            $('#send-btn').on('click', function() {
+                sendMessage();
+            });
+
+            $('#user-input').on('keypress', function(e) {
+                if (e.which === 13) {
+                    sendMessage();
+                }
+            });
+
+            var recording = false;
+            var recorder;
+
+            function toggleRecording() {
+                const t = translations[currentLanguage];
+                if (recording) {
+                    stopRecording();
+                    $('#record-btn').removeClass('btn-recording');
+                    $('#record-text').text(t.recordBtn);
+                } else {
+                    startRecording();
+                    $('#record-btn').addClass('btn-recording');
+                    $('#record-text').text(t.stopRecording);
+                }
+                recording = !recording;
+            }
+
+            
+            function startRecording() {
+                if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                    navigator.mediaDevices.getUserMedia({ audio: true })
+                        .then(function(stream) {
+                            recorder = new MediaRecorder(stream);
+                            var chunks = [];
+            
+                            recorder.addEventListener('dataavailable', function(e) {
+                                chunks.push(e.data);
+                            });
+            
+                            recorder.addEventListener('stop', function() {
+                                var audioBlob = new Blob(chunks, { type: 'audio/webm' });
+                                var formData = new FormData();
+                                formData.append('audio', audioBlob, 'audio.webm');
+                                sendAudio(formData);
+                            });
+            
+                            recorder.start();
+                        })
+                        .catch(function(err) {
+                            console.error('Error accessing microphone:', err);
+                            alert('Error accessing microphone. Please check permissions.');
+                        });
+                } else {
+                    console.error('getUserMedia is not supported in this browser.');
+                    alert('Audio recording is not supported in this browser.');
+                }
+            }
+
+
+            function stopRecording() {
+                if (recorder) {
+                    recorder.stop();
+                }
+            }
+
+            function sendAudio(formData) {
+                const t = translations[currentLanguage];
+                $('#chat-container').append('<div class="message-wrapper bot-message"><div class="loading-message"><div class="loading-dots"><span></span><span></span><span></span></div>' + t.processingAudio + '</div></div>');
+                scrollToBottom();
+
+                $.ajax({
+                    url: '/chat',
+                    type: 'POST',
+                    data: formData,
+                    contentType: false,
+                    processData: false,
+                    success: function(response) {
+                        $('#chat-container .loading-message:last').parent().remove();
+
+                        var transcription = response.text;
+                        $('#user-input').val(transcription);
+                        sendMessage();
+                    },
+                    error: function(xhr, status, error) {
+                        $('#chat-container .loading-message:last').parent().remove();
+                        console.error('Error uploading audio:', error);
+                        alert('Error processing audio. Please try again.');
+                    }
+                });
+            }
+
+            function sendMessage() {
+                var userInput = $('#user-input').val();
+                if (userInput.trim() !== '') {
+                    $('#user-input').val('');
+                    $('#chat-container').append('<div class="message-wrapper user-message"><div class="message-content">' + escapeHtml(userInput) + '</div></div>');
+                    scrollToBottom();
+
+                    const t = translations[currentLanguage];
+                    $('#chat-container').append('<div class="message-wrapper bot-message"><div class="loading-message"><div class="loading-dots"><span></span><span></span><span></span></div>' + t.thinking + '</div></div>');
+                    scrollToBottom();
+
+                    // Send message with language context
+                    $.post('/chat', {
+                        text: userInput,
+                        language: currentLanguage,
+                        system_prompt: systemPrompt
+                    }, function(response) {
+                        $('#chat-container .loading-message:last').parent().remove();
+
+                        var messageId = 'msg-' + Date.now();
+                        var formattedText = formatBotMessage(response.text);
+                        var messageHtml = '<div class="message-wrapper bot-message">' +
+                            '<div class="message-with-audio">' +
+                            '<div class="bot-avatar">🤖</div>' +
+                            '<div class="message-content-wrapper">' +
+                            '<div class="message-content" id="' + messageId + '">' + formattedText + '</div>' +
+                            '<button class="audio-play-btn" onclick="playAudio(\'' + messageId + '\', \'' + response.voice + '\')"><i class="bi bi-volume-up-fill"></i></button>' +
+                            '</div></div></div>';
+                        $('#chat-container').append(messageHtml);
+                        scrollToBottom();
+
+                        showNotification(response.text);
+                    }).fail(function() {
+                        $('#chat-container .loading-message:last').parent().remove();
+                        const t = translations[currentLanguage];
+                        $('#chat-container').append('<div class="message-wrapper bot-message"><div class="message-with-audio"><div class="bot-avatar">🤖</div><div class="message-content" style="color: #dc3545;">' + t.errorMsg + '</div></div></div>');
+                        scrollToBottom();
+                    });
+                }
+            }
+
+            window.currentAudio = null;
+            window.currentButton = null;
+
+            window.playAudio = function(messageId, voiceFile) {
+                var audio = document.getElementById('audio');
+                var button = event.currentTarget;
+                
+                // If clicking the same button that's playing, pause it
+                if (window.currentAudio === voiceFile && !audio.paused) {
+                    audio.pause();
+                    button.innerHTML = '<i class="bi bi-volume-up-fill"></i>';
+                    button.classList.remove('playing');
+                    window.currentButton = null;
+                    return;
+                }
+                
+                // Reset previous button if exists
+                if (window.currentButton) {
+                    window.currentButton.innerHTML = '<i class="bi bi-volume-up-fill"></i>';
+                    window.currentButton.classList.remove('playing');
+                }
+                
+                // Play new audio
+                audio.pause();
+                audio.src = voiceFile;
+                audio.load();
+                audio.play();
+                
+                button.innerHTML = '<i class="bi bi-pause-fill"></i>';
+                button.classList.add('playing');
+                window.currentAudio = voiceFile;
+                window.currentButton = button;
+                
+                // Reset button when audio ends
+                audio.onended = function() {
+                    button.innerHTML = '<i class="bi bi-volume-up-fill"></i>';
+                    button.classList.remove('playing');
+                    window.currentButton = null;
+                };
+            };
+
+            function showNotification(message) {
+                if (Notification.permission === "granted") {
+                    var notification = new Notification("AgriBot", {
+                        body: message.substring(0, 100) + (message.length > 100 ? '...' : ''),
+                        icon: "{{ url_for('static', filename='images/favicon.ico') }}"
+                    });
+                } else if (Notification.permission !== "denied") {
+                    Notification.requestPermission().then(function(permission) {
+                        if (permission === "granted") {
+                            var notification = new Notification("AgriBot", {
+                                body: message.substring(0, 100) + (message.length > 100 ? '...' : ''),
+                                icon: "{{ url_for('static', filename='images/favicon.ico') }}"
+                            });
+                        }
+                    });
+                }
+            }
+
+            function scrollToBottom() {
+                $('#chat-container').scrollTop($('#chat-container')[0].scrollHeight);
+            }
+
+            function formatBotMessage(text) {
+                // First, escape basic HTML
+                var div = document.createElement('div');
+                div.textContent = text;
+                text = div.innerHTML;
+                
+                // Remove excessive blank lines
+                text = text.replace(/\n{3,}/g, '\n\n');
+                
+                // Convert **Section Headings:** to proper h3 tags
+                text = text.replace(/\*\*([^*\n]+):\*\*/g, '<h3>$1</h3>');
+                
+                // Convert numbered items with **bold title**: description
+                text = text.replace(/^(\d+)\.\s+\*\*([^*]+)\*\*:\s*(.+?)$/gm, 
+                    '<div class="list-item"><strong>$1. $2:</strong><span class="list-item-content">$3</span></div>');
+                
+                // Convert numbered items with regular title: description
+                text = text.replace(/^(\d+)\.\s+([^:\n]+):\s*(.+?)$/gm, 
+                    '<div class="list-item"><strong>$1. $2:</strong><span class="list-item-content">$3</span></div>');
+                
+                // Convert standalone **bold items** (without colons) in tips section
+                text = text.replace(/\*\*([^*:]+)\*\*:\s*(.+?)(?=\n|$)/g, 
+                    '<div class="list-item"><strong>$1:</strong><span class="list-item-content">$2</span></div>');
+                
+                // Convert bullet points
+                text = text.replace(/^[\*\-]\s+(.+?)$/gm, '<li>$1</li>');
+                
+                // Wrap consecutive <li> in <ul>
+                text = text.replace(/(<li>[\s\S]*?<\/li>)(?!\s*<li>)/g, '<ul>$1</ul>');
+                text = text.replace(/<\/ul>\s*<ul>/g, '');
+                
+                // Convert Tips sections
+                text = text.replace(/\*\*?(Tips and Precautions|Tips for [^:*]+|Additional Tips?)[:\*]*/gi, 
+                    '<div class="tip-section"><div class="tip-title">💡 $1</div>');
+                
+                // Close tip sections
+                text = text.replace(/(<div class="tip-section">[\s\S]*?)(?=<h3>|$)/g, function(match) {
+                    if (!match.endsWith('</div>')) {
+                        return match + '</div>';
+                    }
+                    return match;
+                });
+                
+                // Remove remaining ** markers
+                text = text.replace(/\*\*/g, '');
+                
+                // Clean up whitespace
+                text = text.replace(/\n+(?=<)/g, '');
+                text = text.replace(/>\n+/g, '>');
+                
+                // Convert paragraph breaks
+                text = text.replace(/\n\n/g, '<br><br>');
+                text = text.replace(/\n/g, ' ');
+                
+                // Remove extra spaces
+                text = text.replace(/\s+/g, ' ');
+                text = text.replace(/>\s+</g, '><');
+                text = text.replace(/\s+>/g, '>');
+                text = text.replace(/<\s+/g, '<');
+                
+                return text;
+            }
+
+            function escapeHtml(text) {
+                var map = {
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '"': '&quot;',
+                    "'": '&#039;'
+                };
+                return text.replace(/[&<>"']/g, function(m) { return map[m]; });
+            }
+        });
+    </script>
+    
+</body>
+</html>
