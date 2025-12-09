@@ -559,9 +559,207 @@
             gap: 6px;
         }
 
+        /* Weather Widget Styles */
+        .weather-widget {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 12px;
+            padding: 12px 20px;
+            margin: 12px 24px;
+            box-shadow: var(--shadow);
+            border-left: 4px solid var(--secondary-green);
+            flex-shrink: 0;
+            transition: all 0.3s ease;
+        }
+
+        .weather-widget.compact {
+            padding: 10px 20px;
+        }
+
+        .weather-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 0;
+        }
+
+        .weather-location-input {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex: 1;
+            transition: all 0.3s ease;
+        }
+
+        .weather-widget.compact .weather-location-input {
+            display: none;
+        }
+
+        .weather-location-input input {
+            flex: 1;
+            padding: 8px 12px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.3s ease;
+        }
+
+        .weather-location-input input:focus {
+            border-color: var(--secondary-green);
+        }
+
+        .weather-location-input button {
+            padding: 8px 16px;
+            background: var(--secondary-green);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+        }
+
+        .weather-location-input button:hover {
+            background: var(--primary-green);
+            transform: translateY(-2px);
+        }
+
+        .weather-display {
+            display: none;
+        }
+
+        .weather-display.active {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .weather-main {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin: 0;
+        }
+
+        .weather-icon {
+            font-size: 32px;
+            line-height: 1;
+        }
+
+        .weather-temp-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .weather-location-name {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--primary-green);
+            margin: 0;
+        }
+
+        .weather-temp {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--text-dark);
+            line-height: 1;
+        }
+
+        .weather-description {
+            color: var(--text-gray);
+            font-size: 12px;
+            text-transform: capitalize;
+        }
+
+        .weather-details {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+            align-items: center;
+            margin-left: auto;
+        }
+
+        .weather-detail-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 12px;
+        }
+
+        .weather-detail-icon {
+            font-size: 16px;
+        }
+
+        .weather-detail-label {
+            display: none;
+        }
+
+        .weather-detail-value {
+            font-weight: 600;
+            color: var(--text-dark);
+        }
+
+        .weather-timestamp {
+            display: none;
+        }
+
+        .weather-change-btn {
+            padding: 6px 14px;
+            background: transparent;
+            color: var(--secondary-green);
+            border: 1px solid var(--secondary-green);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .weather-change-btn:hover {
+            background: var(--secondary-green);
+            color: white;
+        }
+
+        .weather-change-btn i {
+            font-size: 14px;
+        }
+
         @media (max-width: 768px) {
             .language-options {
                 grid-template-columns: 1fr;
+            }
+            
+            .weather-widget {
+                margin: 12px 16px;
+                padding: 10px 16px;
+            }
+            
+            .weather-display.active {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 8px;
+            }
+            
+            .weather-details {
+                margin-left: 0;
+                gap: 12px;
+            }
+            
+            .weather-temp {
+                font-size: 20px;
+            }
+            
+            .weather-icon {
+                font-size: 28px;
             }
         }
     </style>
@@ -597,6 +795,48 @@
             </h1>
             <div class="disclaimer" id="app-subtitle">
                 <i class="bi bi-info-circle"></i> <span>Your smart farming assistant - Powered by AI</span>
+            </div>
+        </div>
+
+        <!-- Weather Widget -->
+        <div class="weather-widget" id="weather-widget">
+            <div class="weather-location-input">
+                <input type="text" id="location-input" placeholder="Enter your location (e.g., Mumbai, Bangalore)">
+                <button id="get-weather-btn">
+                    <i class="bi bi-cloud-sun"></i> Get Weather
+                </button>
+            </div>
+            
+            <div class="weather-display" id="weather-display">
+                <div class="weather-main">
+                    <div class="weather-icon" id="weather-icon">🌤️</div>
+                    <div class="weather-temp-info">
+                        <div class="weather-location-name" id="weather-location">Location</div>
+                        <div class="weather-temp" id="weather-temp">--°C</div>
+                        <div class="weather-description" id="weather-desc">--</div>
+                    </div>
+                </div>
+                <div class="weather-details">
+                    <div class="weather-detail-item" title="Humidity">
+                        <span class="weather-detail-icon">💧</span>
+                        <span class="weather-detail-value" id="weather-humidity">--%</span>
+                    </div>
+                    <div class="weather-detail-item" title="Wind Speed">
+                        <span class="weather-detail-icon">💨</span>
+                        <span class="weather-detail-value" id="weather-wind">-- km/h</span>
+                    </div>
+                    <div class="weather-detail-item" title="Feels Like">
+                        <span class="weather-detail-icon">🌡️</span>
+                        <span class="weather-detail-value" id="weather-feels">--°C</span>
+                    </div>
+                    <div class="weather-detail-item" title="Precipitation">
+                        <span class="weather-detail-icon">🌧️</span>
+                        <span class="weather-detail-value" id="weather-precip">-- mm</span>
+                    </div>
+                </div>
+                <button class="weather-change-btn" id="change-location-btn">
+                    <i class="bi bi-geo-alt"></i> Change
+                </button>
             </div>
         </div>
 
@@ -653,6 +893,7 @@
 
         let currentLanguage = 'en';
         let systemPrompt = translations.en.systemPrompt;
+        let currentLocation = '';
 
         function selectLanguage(lang) {
             currentLanguage = lang;
@@ -679,6 +920,66 @@
         window.selectLanguage = selectLanguage;
 
         $(document).ready(function() {
+            // Weather functionality
+            $('#get-weather-btn').on('click', function() {
+                getWeather();
+            });
+
+            $('#location-input').on('keypress', function(e) {
+                if (e.which === 13) {
+                    getWeather();
+                }
+            });
+
+            $('#change-location-btn').on('click', function() {
+                $('#weather-widget').removeClass('compact');
+                $('#weather-display').removeClass('active');
+                $('#location-input').val('').focus();
+                currentLocation = '';
+            });
+
+            function getWeather() {
+                const location = $('#location-input').val().trim();
+                if (location === '') {
+                    alert('Please enter a location');
+                    return;
+                }
+
+                currentLocation = location;
+                $('#get-weather-btn').html('<i class="bi bi-arrow-repeat"></i> Loading...').prop('disabled', true);
+
+                $.ajax({
+                    url: '/weather',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ location: location }),
+                    success: function(data) {
+                        displayWeather(data);
+                        $('#get-weather-btn').html('<i class="bi bi-cloud-sun"></i> Get Weather').prop('disabled', false);
+                    },
+                    error: function(xhr, status, error) {
+                        alert('Unable to fetch weather data. Please check the location and try again.');
+                        $('#get-weather-btn').html('<i class="bi bi-cloud-sun"></i> Get Weather').prop('disabled', false);
+                    }
+                });
+            }
+
+            function displayWeather(data) {
+                $('#weather-location').text(data.location);
+                $('#weather-temp').text(data.temperature + '°C');
+                $('#weather-desc').text(data.description);
+                $('#weather-icon').text(data.icon);
+                $('#weather-humidity').text(data.humidity + '%');
+                $('#weather-wind').text(data.wind_speed + ' km/h');
+                $('#weather-feels').text(data.feels_like + '°C');
+                $('#weather-precip').text(data.precipitation + ' mm');
+                
+                $('#weather-display').addClass('active');
+                $('#weather-widget').addClass('compact');
+            }
+
+            window.getWeather = getWeather;
+
             $('#send-btn').on('click', function() {
                 sendMessage();
             });
@@ -781,11 +1082,12 @@
                     $('#chat-container').append('<div class="message-wrapper bot-message"><div class="loading-message"><div class="loading-dots"><span></span><span></span><span></span></div>' + t.thinking + '</div></div>');
                     scrollToBottom();
 
-                    // Send message with language context
+                    // Send message with language context and location
                     $.post('/chat', {
                         text: userInput,
                         language: currentLanguage,
-                        system_prompt: systemPrompt
+                        system_prompt: systemPrompt,
+                        location: currentLocation
                     }, function(response) {
                         $('#chat-container .loading-message:last').parent().remove();
 

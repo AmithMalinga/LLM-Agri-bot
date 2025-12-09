@@ -9,6 +9,7 @@ from gtts import gTTS
 import asyncio
 import string
 import random
+from datetime import datetime
 
 
 #load the api keys from the the .env file
@@ -23,10 +24,121 @@ app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['ALLOWED_EXTENSIONS'] = {'webm'}
 
+# Weather API function using Open-Meteo (completely free, no API key)
+def get_weather_data(location):
+    try:
+        # Step 1: Get coordinates from location name using Open-Meteo Geocoding
+        geocode_url = f"https://geocoding-api.open-meteo.com/v1/search?name={location}&count=1&language=en&format=json"
+        geo_response = requests.get(geocode_url, timeout=10)
+        
+        if geo_response.status_code != 200:
+            print(f"Geocoding failed: {geo_response.status_code}")
+            return None
+            
+        geo_data = geo_response.json()
+        
+        if 'results' not in geo_data or len(geo_data['results']) == 0:
+            print(f"Location not found: {location}")
+            return None
+        
+        # Get first result
+        place = geo_data['results'][0]
+        latitude = place['latitude']
+        longitude = place['longitude']
+        location_name = place['name']
+        country = place.get('country', '')
+        
+        # Step 2: Get weather data using coordinates
+        weather_url = f"https://api.open-meteo.com/v1/forecast?latitude={latitude}&longitude={longitude}&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m,surface_pressure&timezone=auto"
+        weather_response = requests.get(weather_url, timeout=10)
+        
+        if weather_response.status_code != 200:
+            print(f"Weather API failed: {weather_response.status_code}")
+            return None
+            
+        weather_data = weather_response.json()
+        current = weather_data['current']
+        
+        # Map weather code to description and icon
+        weather_code = current['weather_code']
+        description, icon = get_weather_info(weather_code)
+        
+        weather_info = {
+            'location': f"{location_name}, {country}",
+            'temperature': str(round(current['temperature_2m'])),
+            'feels_like': str(round(current['apparent_temperature'])),
+            'humidity': str(current['relative_humidity_2m']),
+            'description': description,
+            'wind_speed': str(round(current['wind_speed_10m'])),
+            'pressure': str(round(current['surface_pressure'])),
+            'precipitation': str(current['precipitation']),
+            'icon': icon,
+            'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M')
+        }
+        return weather_info
+        
+    except requests.exceptions.Timeout:
+        print("Weather API timeout")
+        return None
+    except requests.exceptions.RequestException as e:
+        print(f"Weather API request error: {e}")
+        return None
+    except Exception as e:
+        print(f"Weather API Error: {e}")
+        import traceback
+        traceback.print_exc()
+        return None
 
-def get_anwer_openai(question, system_prompt=None, language='en'):
+def get_weather_info(weather_code):
+    """Map WMO weather codes to descriptions and icons"""
+    weather_map = {
+        0: ("Clear sky", "☀️"),
+        1: ("Mainly clear", "🌤️"),
+        2: ("Partly cloudy", "⛅"),
+        3: ("Overcast", "☁️"),
+        45: ("Foggy", "🌫️"),
+        48: ("Depositing rime fog", "🌫️"),
+        51: ("Light drizzle", "🌦️"),
+        53: ("Moderate drizzle", "🌦️"),
+        55: ("Dense drizzle", "🌧️"),
+        56: ("Light freezing drizzle", "🌧️"),
+        57: ("Dense freezing drizzle", "🌧️"),
+        61: ("Slight rain", "🌧️"),
+        63: ("Moderate rain", "🌧️"),
+        65: ("Heavy rain", "🌧️"),
+        66: ("Light freezing rain", "🌧️"),
+        67: ("Heavy freezing rain", "🌧️"),
+        71: ("Slight snow", "🌨️"),
+        73: ("Moderate snow", "❄️"),
+        75: ("Heavy snow", "❄️"),
+        77: ("Snow grains", "❄️"),
+        80: ("Slight rain showers", "🌦️"),
+        81: ("Moderate rain showers", "🌧️"),
+        82: ("Violent rain showers", "⛈️"),
+        85: ("Slight snow showers", "🌨️"),
+        86: ("Heavy snow showers", "❄️"),
+        95: ("Thunderstorm", "⛈️"),
+        96: ("Thunderstorm with slight hail", "⛈️"),
+        99: ("Thunderstorm with heavy hail", "⛈️"),
+    }
+    
+    return weather_map.get(weather_code, ("Unknown", "🌡️"))
+
+
+def get_anwer_openai(question, system_prompt=None, language='en', weather_context=None):
     if system_prompt is None:
         system_prompt = "You are a helpful agriculture chatbot assisting farmers with their queries. Respond in English."
+    
+    # Add weather context to system prompt if available
+    if weather_context:
+        weather_info = f"\n\nCurrent Weather Information for {weather_context['location']}:\n"
+        weather_info += f"Temperature: {weather_context['temperature']}°C (Feels like {weather_context['feels_like']}°C)\n"
+        weather_info += f"Condition: {weather_context['description']}\n"
+        weather_info += f"Humidity: {weather_context['humidity']}%\n"
+        weather_info += f"Wind Speed: {weather_context['wind_speed']} km/h\n"
+        weather_info += f"Precipitation: {weather_context['precipitation']} mm\n"
+        weather_info += "\nPlease consider this current weather data when providing farming advice."
+        system_prompt += weather_info
     
     completion = client.chat.completions.create(
                 model="llama-3.3-70b-versatile",
@@ -61,6 +173,21 @@ def text_to_audio(text, filename, language='en'):
 def index():
     return render_template('index.html')
 
+@app.route('/weather', methods=['POST'])
+def weather():
+    data = request.get_json()
+    location = data.get('location', '')
+    
+    if not location:
+        return jsonify({'error': 'Location is required'}), 400
+    
+    weather_data = get_weather_data(location)
+    
+    if weather_data:
+        return jsonify(weather_data)
+    else:
+        return jsonify({'error': 'Unable to fetch weather data'}), 500
+
 @app.route('/chat', methods=['POST'])
 def chat():
     if 'audio' in request.files:
@@ -76,7 +203,14 @@ def chat():
     if text:
         language = request.form.get('language', 'en')
         system_prompt = request.form.get('system_prompt')
-        response = process_text(text, language, system_prompt)
+        location = request.form.get('location', '')
+        
+        # Get weather context if location provided
+        weather_context = None
+        if location:
+            weather_context = get_weather_data(location)
+        
+        response = process_text(text, language, system_prompt, weather_context)
         return {'text': response['text'],'voice': url_for('static', filename='audio/' + response['voice'])}
 
     return jsonify({'text': 'Invalid request'})
@@ -97,9 +231,9 @@ def process_audio(filepath):
     return data['text']
     
 
-def process_text(text, language='en', system_prompt=None):
-    # Get AI response with language context
-    return_text = get_anwer_openai(text, system_prompt, language)
+def process_text(text, language='en', system_prompt=None, weather_context=None):
+    # Get AI response with language context and weather data
+    return_text = get_anwer_openai(text, system_prompt, language, weather_context)
     
     # Generate random filename
     res = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
