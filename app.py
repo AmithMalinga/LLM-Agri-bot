@@ -10,6 +10,7 @@ import asyncio
 import string
 import random
 from datetime import datetime
+import threading
 
 
 #load the api keys from the the .env file
@@ -17,6 +18,17 @@ load_dotenv()
 #
 hugging_face = os.getenv('hugging_face')
 groq_api_key = os.getenv('groq_api_key')
+
+# Verify API keys are loaded
+if not groq_api_key:
+    print("WARNING: groq_api_key not found in environment variables!")
+    print("Please create a .env file with: groq_api_key=your_api_key_here")
+else:
+    print(f"Groq API key loaded: {groq_api_key[:10]}...")
+
+if not hugging_face:
+    print("WARNING: hugging_face token not found in environment variables!")
+
 #
 client = Groq(api_key=groq_api_key)
 
@@ -140,16 +152,28 @@ def get_anwer_openai(question, system_prompt=None, language='en', weather_contex
         weather_info += "\nPlease consider this current weather data when providing farming advice."
         system_prompt += weather_info
     
-    completion = client.chat.completions.create(
-                model="llama-3.3-70b-versatile",
-                messages = [{"role": "system", "content" : system_prompt},
-                            {"role": "user", "content" : "Give a Brief Of Agriculture Seasons in India"},
-                            {"role":"assistant","content":"In India, the agricultural season consists of three major seasons: the Kharif (monsoon), the Rabi (winter), and the Zaid (summer) seasons. Each season has its own specific crops and farming practices.\n\n1. Kharif Season (Monsoon Season):\nThe Kharif season typically starts in June and lasts until September. This season is characterized by the onset of the monsoon rains, which are crucial for agricultural activities in several parts of the country. Major crops grown during this season include rice, maize, jowar (sorghum), bajra (pearl millet), cotton, groundnut, turmeric, and sugarcane. These crops thrive in the rainy conditions and are often referred to as rain-fed crops.\n\n2. Rabi Season (Winter Season):\nThe Rabi season usually spans from October to March. This season is characterized by cooler temperatures and lesser or no rainfall. Crops grown during the Rabi season are generally sown in October and harvested in March-April. The major Rabi crops include wheat, barley, mustard, peas, gram (chickpeas), linseed, and coriander. These crops rely mostly on irrigation and are well-suited for the drier winter conditions.\n\n3. Zaid Season (Summer Season):\nThe Zaid season occurs between March and June and is a transitional period between Rabi and Kharif seasons. This season is marked by warmer temperatures and relatively less rainfall. The Zaid crops are grown during this time and include vegetables like cucumber, watermelon, muskmelon, bottle gourd, bitter gourd, and leafy greens such as spinach and amaranth. These crops are generally irrigated and have a shorter growing period compared to Kharif and Rabi crops.\n\nThese three agricultural seasons play a significant role in India's agricultural economy and provide stability to food production throughout the year. Farmers adapt their farming practices and crop selection accordingly to make the best use of the prevailing climatic conditions in each season."},
-                            {"role":"user","content":question}
-                ]
-            )
-    
-    return completion.choices[0].message.content
+    try:
+        print(f"Sending request to Groq API with question: {question[:50]}...")
+        completion = client.chat.completions.create(
+                    model="llama-3.3-70b-versatile",
+                    messages = [{"role": "system", "content" : system_prompt},
+                                {"role": "user", "content" : "Give a Brief Of Agriculture Seasons in India"},
+                                {"role":"assistant","content":"In India, the agricultural season consists of three major seasons: the Kharif (monsoon), the Rabi (winter), and the Zaid (summer) seasons. Each season has its own specific crops and farming practices.\n\n1. Kharif Season (Monsoon Season):\nThe Kharif season typically starts in June and lasts until September. This season is characterized by the onset of the monsoon rains, which are crucial for agricultural activities in several parts of the country. Major crops grown during this season include rice, maize, jowar (sorghum), bajra (pearl millet), cotton, groundnut, turmeric, and sugarcane. These crops thrive in the rainy conditions and are often referred to as rain-fed crops.\n\n2. Rabi Season (Winter Season):\nThe Rabi season usually spans from October to March. This season is characterized by cooler temperatures and lesser or no rainfall. Crops grown during the Rabi season are generally sown in October and harvested in March-April. The major Rabi crops include wheat, barley, mustard, peas, gram (chickpeas), linseed, and coriander. These crops rely mostly on irrigation and are well-suited for the drier winter conditions.\n\n3. Zaid Season (Summer Season):\nThe Zaid season occurs between March and June and is a transitional period between Rabi and Kharif seasons. This season is marked by warmer temperatures and relatively less rainfall. The Zaid crops are grown during this time and include vegetables like cucumber, watermelon, muskmelon, bottle gourd, bitter gourd, and leafy greens such as spinach and amaranth. These crops are generally irrigated and have a shorter growing period compared to Kharif and Rabi crops.\n\nThese three agricultural seasons play a significant role in India's agricultural economy and provide stability to food production throughout the year. Farmers adapt their farming practices and crop selection accordingly to make the best use of the prevailing climatic conditions in each season."},
+                                {"role":"user","content":question}
+                    ],
+                    timeout=30.0  # 30 second timeout
+                )
+        print("Received response from Groq API")
+        return completion.choices[0].message.content
+    except TimeoutError:
+        print("Groq API request timed out")
+        raise Exception("AI service timed out. Please try again.")
+    except Exception as e:
+        print(f"Error in Groq API call: {e}")
+        print(f"Error type: {type(e).__name__}")
+        import traceback
+        traceback.print_exc()
+        raise Exception(f"Failed to get AI response: {str(e)}")
 
 
 ###
@@ -165,8 +189,18 @@ def text_to_audio(text, filename, language='en'):
         'si': 'si'  # Sinhala
     }
     tts_lang = lang_map.get(language, 'en')
-    tts = gTTS(text, lang=tts_lang)
-    tts.save(f'static/audio/{filename}.mp3')
+    try:
+        tts = gTTS(text, lang=tts_lang)
+        tts.save(f'static/audio/{filename}.mp3')
+    except Exception as e:
+        print(f"Error generating audio: {e}")
+
+
+def generate_audio_async(text, filename, language='en'):
+    """Generate audio in a background thread to avoid blocking"""
+    thread = threading.Thread(target=text_to_audio, args=(text, filename, language))
+    thread.daemon = True
+    thread.start()
 
 
 @app.route('/')
@@ -190,30 +224,37 @@ def weather():
 
 @app.route('/chat', methods=['POST'])
 def chat():
-    if 'audio' in request.files:
-        audio = request.files['audio']
-        if audio and allowed_file(audio.filename):
-            filename = secure_filename(audio.filename)
-            filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-            audio.save(filepath)
-            transcription = process_audio(filepath)
-            return jsonify({'text': transcription})
+    try:
+        if 'audio' in request.files:
+            audio = request.files['audio']
+            if audio and allowed_file(audio.filename):
+                filename = secure_filename(audio.filename)
+                filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                audio.save(filepath)
+                transcription = process_audio(filepath)
+                return jsonify({'text': transcription})
 
-    text = request.form.get('text')
-    if text:
-        language = request.form.get('language', 'en')
-        system_prompt = request.form.get('system_prompt')
-        location = request.form.get('location', '')
-        
-        # Get weather context if location provided
-        weather_context = None
-        if location:
-            weather_context = get_weather_data(location)
-        
-        response = process_text(text, language, system_prompt, weather_context)
-        return {'text': response['text'],'voice': url_for('static', filename='audio/' + response['voice'])}
+        text = request.form.get('text')
+        if text:
+            language = request.form.get('language', 'en')
+            system_prompt = request.form.get('system_prompt')
+            location = request.form.get('location', '')
+            
+            # Get weather context if location provided
+            weather_context = None
+            if location:
+                weather_context = get_weather_data(location)
+            
+            response = process_text(text, language, system_prompt, weather_context)
+            return jsonify({'text': response['text'],'voice': url_for('static', filename='audio/' + response['voice'])})
 
-    return jsonify({'text': 'Invalid request'})
+        return jsonify({'text': 'Invalid request'}), 400
+    
+    except Exception as e:
+        print(f"Error in chat endpoint: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': 'An error occurred processing your request'}), 500
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in app.config['ALLOWED_EXTENSIONS']
@@ -232,16 +273,24 @@ def process_audio(filepath):
     
 
 def process_text(text, language='en', system_prompt=None, weather_context=None):
-    # Get AI response with language context and weather data
-    return_text = get_anwer_openai(text, system_prompt, language, weather_context)
-    
-    # Generate random filename
-    res = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
-    
-    # Generate audio in the appropriate language
-    text_to_audio(return_text, res, language)
-    
-    return {"text": return_text, "voice": f"{res}.mp3"}
+    try:
+        # Get AI response with language context and weather data
+        print(f"Processing text: {text[:50]}...")
+        return_text = get_anwer_openai(text, system_prompt, language, weather_context)
+        
+        # Generate random filename
+        res = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
+        
+        # Generate audio in background thread (non-blocking)
+        generate_audio_async(return_text, res, language)
+        
+        print("Text processed successfully")
+        return {"text": return_text, "voice": f"{res}.mp3"}
+    except Exception as e:
+        print(f"Error in process_text: {e}")
+        import traceback
+        traceback.print_exc()
+        raise
 
 
 if __name__ == '__main__':
