@@ -801,7 +801,7 @@
         <!-- Weather Widget -->
         <div class="weather-widget" id="weather-widget">
             <div class="weather-location-input">
-                <input type="text" id="location-input" placeholder="Enter your location (e.g., Mumbai, Bangalore)">
+                <input type="text" id="location-input" placeholder="Enter your location (e.g. Colombo)">
                 <button id="get-weather-btn">
                     <i class="bi bi-cloud-sun"></i> Get Weather
                 </button>
@@ -894,6 +894,11 @@
         let currentLanguage = 'en';
         let systemPrompt = translations.en.systemPrompt;
         let currentLocation = '';
+
+        // Define scrollToBottom globally so it can be accessed from anywhere
+        function scrollToBottom() {
+            $('#chat-container').scrollTop($('#chat-container')[0].scrollHeight);
+        }
 
         function selectLanguage(lang) {
             currentLanguage = lang;
@@ -1083,32 +1088,51 @@
                     scrollToBottom();
 
                     // Send message with language context and location
-                    $.post('/chat', {
-                        text: userInput,
-                        language: currentLanguage,
-                        system_prompt: systemPrompt,
-                        location: currentLocation
-                    }, function(response) {
-                        $('#chat-container .loading-message:last').parent().remove();
+                    $.ajax({
+                        url: '/chat',
+                        method: 'POST',
+                        data: {
+                            text: userInput,
+                            language: currentLanguage,
+                            system_prompt: systemPrompt,
+                            location: currentLocation
+                        },
+                        timeout: 60000, // 60 second timeout
+                        success: function(response) {
+                            // Remove loading message
+                            $('#chat-container .loading-message:last').parent().remove();
 
-                        var messageId = 'msg-' + Date.now();
-                        var formattedText = formatBotMessage(response.text);
-                        var messageHtml = '<div class="message-wrapper bot-message">' +
-                            '<div class="message-with-audio">' +
-                            '<div class="bot-avatar">🤖</div>' +
-                            '<div class="message-content-wrapper">' +
-                            '<div class="message-content" id="' + messageId + '">' + formattedText + '</div>' +
-                            '<button class="audio-play-btn" onclick="playAudio(\'' + messageId + '\', \'' + response.voice + '\')"><i class="bi bi-volume-up-fill"></i></button>' +
-                            '</div></div></div>';
-                        $('#chat-container').append(messageHtml);
-                        scrollToBottom();
+                            var messageId = 'msg-' + Date.now();
+                            var formattedText = formatBotMessage(response.text);
+                            var messageHtml = '<div class="message-wrapper bot-message">' +
+                                '<div class="message-with-audio">' +
+                                '<div class="bot-avatar">🤖</div>' +
+                                '<div class="message-content-wrapper">' +
+                                '<div class="message-content" id="' + messageId + '">' + formattedText + '</div>' +
+                                '<button class="audio-play-btn" onclick="playAudio(\'' + messageId + '\', \'' + response.voice + '\')"><i class="bi bi-volume-up-fill"></i></button>' +
+                                '</div></div></div>';
+                            $('#chat-container').append(messageHtml);
+                            scrollToBottom();
 
-                        showNotification(response.text);
-                    }).fail(function() {
-                        $('#chat-container .loading-message:last').parent().remove();
-                        const t = translations[currentLanguage];
-                        $('#chat-container').append('<div class="message-wrapper bot-message"><div class="message-with-audio"><div class="bot-avatar">🤖</div><div class="message-content" style="color: #dc3545;">' + t.errorMsg + '</div></div></div>');
-                        scrollToBottom();
+                            showNotification(response.text);
+                        },
+                        error: function(xhr, status, error) {
+                            // Always remove loading message
+                            $('#chat-container .loading-message:last').parent().remove();
+                            
+                            const t = translations[currentLanguage];
+                            var errorMessage = t.errorMsg;
+                            
+                            // Provide specific error messages
+                            if (status === 'timeout') {
+                                errorMessage = 'Request timed out. Please try again.';
+                            } else if (xhr.status === 500) {
+                                errorMessage = 'Server error. Please try again later.';
+                            }
+                            
+                            $('#chat-container').append('<div class="message-wrapper bot-message"><div class="message-with-audio"><div class="bot-avatar">🤖</div><div class="message-content" style="color: #dc3545;">' + errorMessage + '</div></div></div>');
+                            scrollToBottom();
+                        }
                     });
                 }
             }
@@ -1170,10 +1194,6 @@
                         }
                     });
                 }
-            }
-
-            function scrollToBottom() {
-                $('#chat-container').scrollTop($('#chat-container')[0].scrollHeight);
             }
 
             function formatBotMessage(text) {
